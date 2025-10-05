@@ -787,7 +787,7 @@ hr, .stMarkdown hr {
 .stTabs [aria-selected="true"] {
     background: var(--primary-purple) !important;
     color: #1E293B !important; 
-    box-shadow: var(--shadow-sm) !important;;
+    box-shadow: var(--shadow-sm) !important;
 }
 
 /* Selectboxes y inputs */
