@@ -507,7 +507,7 @@ st.set_page_config(
 # Definir variables de colores y rutas
 PRIMARY_COLOR = "#7bbeed"
 # Ruta relativa para el logo (dentro de la carpeta App)
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "logo_app_oraculo.png")
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "/Users/n.arcos89/Documents/GitHub/Oraculo/logo_app_oraculo.png")
 
 # --- ESTILOS PERSONALIZADOS MEJORADOS ---
 page_bg = """
@@ -1298,7 +1298,7 @@ def cargar_datos():
     
     try:
         # Intentar cargar el dataset principal desde Data/
-        data_path = os.path.join(data_dir, "/Users/n.arcos89/Desktop/Oraculo/Data/data_unificada.csv")
+        data_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_unificada.csv")
         df_principal = pd.read_csv(data_path, sep=';')
         
         # Convertir fechas
@@ -1314,7 +1314,7 @@ def cargar_datos():
         st.warning("⚠️ Dataset principal no encontrado, cargando datos demo...")
         try:
             # Cargar datos demo como fallback desde Data/
-            demo_path = os.path.join(data_dir, "/Users/n.arcos89/Desktop/Oraculo/Data/data_demo_ok.csv")
+            demo_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_demo_ok.csv")
             df_demo = pd.read_csv(demo_path)
             
             # Convertir fechas
@@ -1352,7 +1352,7 @@ def cargar_datos_imagenes():
     
     try:
         # Cargar el CSV de imágenes principal
-        csv_file = "/Users/n.arcos89/Desktop/Oraculo/Data/publicaciones_pixabay_ok.csv"
+        csv_file = "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/publicaciones_pixabay_ok.csv"
         csv_path = os.path.join(data_dir, csv_file)
         
         # Verificar si existe el archivo CSV
