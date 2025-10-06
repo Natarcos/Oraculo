@@ -1298,7 +1298,7 @@ def cargar_datos():
     
     try:
         # Intentar cargar el dataset principal desde Data/
-        data_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_unificada.csv")
+        data_path = os.path.join(data_dir, "data_unificada.csv")
         df_principal = pd.read_csv(data_path, sep=';')
         
         # Convertir fechas
@@ -1314,7 +1314,7 @@ def cargar_datos():
         st.warning("⚠️ Dataset principal no encontrado, cargando datos demo...")
         try:
             # Cargar datos demo como fallback desde Data/
-            demo_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_demo_ok.csv")
+            demo_path = os.path.join(data_dir, "data_demo_ok.csv")
             df_demo = pd.read_csv(demo_path)
             
             # Convertir fechas
@@ -1352,7 +1352,7 @@ def cargar_datos_imagenes():
     
     try:
         # Cargar el CSV de imágenes principal
-        csv_file = "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/publicaciones_pixabay_ok.csv"
+        csv_file = "publicaciones_pixabay_ok.csv"
         csv_path = os.path.join(data_dir, csv_file)
         
         # Verificar si existe el archivo CSV
@@ -5186,7 +5186,7 @@ st.markdown(
     """
     <div style='text-align: center; padding: 2rem; background: rgba(25,25,35,0.9); 
                 border-radius: 15px; margin-top: 2rem; box-shadow: 0 0 15px rgba(66,165,245,0.3);'>
-        <h3 style='color: #bbdefb; margin-bottom: 1rem;'>🔮 Oráculo Digital</h3>
+        <h3 style='color: #42a5f5; margin-bottom: 1rem;'>🔮 Oráculo Digital</h3>
         <p style='color: #90caf9; font-size: 1.1rem; margin-bottom: 1rem;'>
             <strong>Las estrellas guían tu estrategia en redes sociales</strong>
         </p>
