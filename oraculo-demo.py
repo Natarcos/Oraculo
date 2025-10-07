@@ -787,7 +787,7 @@ hr, .stMarkdown hr {
 .stTabs [aria-selected="true"] {
     background: var(--primary-purple) !important;
     color: #1E293B !important; 
-    box-shadow: var(--shadow-sm) !important;
+    box-shadow: var(--shadow-sm) !important;;
 }
 
 /* Selectboxes y inputs */
@@ -1274,7 +1274,7 @@ with col_logo_center:
 st.markdown("""
 <div style='background:rgba(25,25,35,0.85);padding:1.5em 2em;border-radius:18px;margin-bottom:1.5em;
             box-shadow:0 0 20px rgba(103,58,183,0.4);border-left: 4px solid #42a5f5;'>
-    <span style='font-size:1.3em;color:#42a5f5;'><b>Bienvenido al Oráculo Digital</b></span><br>
+    <span style='font-size:1.3em;color:#bbdefb;'><b>Bienvenido al Oráculo Digital</b></span><br>
     <span style='color:#e3f2fd;'>
         Las constelaciones de los datos revelan el porvenir de tus publicaciones.<br>
         El Oráculo te guía a <b>analizar, visualizar y predecir</b> los destinos de Instagram, Facebook y TikTok.<br>
@@ -1291,9 +1291,10 @@ def cargar_datos():
     """
     import os
     
-    # Obtener la ruta base del proyecto (mismo nivel que oraculo.py)
+    # Obtener la ruta base del proyecto (un nivel arriba de App/)
     current_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(current_dir, "Data")
+    base_dir = os.path.dirname(current_dir)
+    data_dir = os.path.join(base_dir, "Data")
     
     try:
         # Intentar cargar el dataset principal desde Data/
@@ -1344,9 +1345,10 @@ def cargar_datos_imagenes():
     """
     import os
     
-    # Obtener la ruta base del proyecto (mismo nivel que oraculo.py)
+    # Obtener la ruta base del proyecto
     current_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(current_dir, "Data")
+    base_dir = os.path.dirname(current_dir)
+    data_dir = os.path.join(base_dir, "Data")
     
     try:
         # Cargar el CSV de imágenes principal
@@ -5184,7 +5186,7 @@ st.markdown(
     """
     <div style='text-align: center; padding: 2rem; background: rgba(25,25,35,0.9); 
                 border-radius: 15px; margin-top: 2rem; box-shadow: 0 0 15px rgba(66,165,245,0.3);'>
-        <h3 style='color: #42a5f5; margin-bottom: 1rem;'>🔮 Oráculo Digital</h3>
+        <h3 style='color: #bbdefb; margin-bottom: 1rem;'>🔮 Oráculo Digital</h3>
         <p style='color: #90caf9; font-size: 1.1rem; margin-bottom: 1rem;'>
             <strong>Las estrellas guían tu estrategia en redes sociales</strong>
         </p>
