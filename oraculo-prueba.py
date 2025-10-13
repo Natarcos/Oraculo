@@ -3,29 +3,32 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import warnings
-import os
-import calendar
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+import os
+import calendar
 from datetime import datetime, timedelta
-import colorsys
-import requests
+import warnings
 warnings.filterwarnings('ignore')
 
 # Nuevas importaciones para análisis de imágenes
 from PIL import Image
+import colorsys
 from sklearn.cluster import KMeans
+import requests
 from io import BytesIO
 
-# FUNCIONES DE PLANIFICACIÓN (ELIMINADAS LAS DUPLICADAS)
+# AÑADIR ESTAS FUNCIONES AQUÍ (DESPUÉS DE LAS IMPORTACIONES)
+
 @st.cache_data
 def generar_planificacion_mensual(canal, posts_semana, mes, año, inversion, incluir_fines, 
                                 priorizar_engagement, hora_inicio, hora_fin, df, _modelo_temporal, 
                                 _le_formato_temporal, _reg, _scaler, _le_canal, _le_formato):
-    """Genera una planificación mensual inteligente usando los modelos predictivos"""
+    """
+    Genera una planificación mensual inteligente usando los modelos predictivos
+    """
     try:
         import calendar
         from datetime import datetime, timedelta
@@ -156,7 +159,7 @@ def generar_planificacion_mensual(canal, posts_semana, mes, año, inversion, inc
                 'hora': hora_seleccionada,
                 'canal': canal,
                 'formato': formato_recomendado,
-                'tematica': tematica_nombre,
+                'tematica': tematica_nombre,  # ← ESTE ES EL CAMPO QUE FALTABA
                 'tematica_code': tematica_seleccionada,
                 'inversion': inversion,
                 'alcance_predicho': alcance_predicho,
@@ -173,142 +176,339 @@ def generar_planificacion_mensual(canal, posts_semana, mes, año, inversion, inc
         st.error(f"Error generando planificación: {str(e)}")
         return []
 
-# FUNCIÓN DE CARGA DE DATOS CORREGIDA
-@st.cache_data
-def cargar_datos():
-    """Carga el dataset principal con fallback a datos demo"""
+def mostrar_calendario_planificacion(planificacion, mes, año):
+    """
+    Muestra un calendario visual con las publicaciones planificadas incluyendo temática
+    """
+    import calendar
     
-    # Usar rutas relativas para el deploy
-    current_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(current_dir, "Data")
+    # Crear calendario del mes
+    cal = calendar.monthcalendar(año, mes)
+    mes_nombre = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes]
     
-    try:
-        # Intentar cargar el dataset principal
-        data_path = os.path.join(data_dir, "data_unificada.csv")
-        df_principal = pd.read_csv(data_path, sep=';')
-        
-        # Convertir fechas
-        if 'Fecha' in df_principal.columns:
-            try:
-                df_principal['Fecha'] = pd.to_datetime(df_principal['Fecha'])
-            except:
-                st.warning("No se pudo convertir la columna Fecha del dataset principal")
-        
-        return df_principal, "principal"
-        
-    except FileNotFoundError:
-        st.warning("⚠️ Dataset principal no encontrado, cargando datos demo...")
-        try:
-            # Cargar datos demo como fallback
-            demo_path = os.path.join(data_dir, "data_demo_ok.csv")
-            df_demo = pd.read_csv(demo_path)
-            
-            # Convertir fechas
-            if 'Fecha' in df_demo.columns:
-                try:
-                    df_demo['Fecha'] = pd.to_datetime(df_demo['Fecha'])
-                except:
-                    st.warning("No se pudo convertir la columna Fecha del dataset demo")
-            
-            return df_demo, "demo"
-            
-        except FileNotFoundError:
-            st.error("❌ No se encontró ningún archivo de datos. Verifique que existan los archivos CSV en la carpeta Data/.")
-            return pd.DataFrame(), "none"
-            
-    except Exception as e:
-        st.error(f"❌ Error al cargar los datos: {str(e)}")
-        return pd.DataFrame(), "error"
+    st.markdown(f"#### 📅 {mes_nombre} {año}")
+    
+    # Crear diccionario de publicaciones por día
+    publicaciones_por_dia = {}
+    for pub in planificacion:
+        dia = pub['dia']
+        if dia not in publicaciones_por_dia:
+            publicaciones_por_dia[dia] = []
+        publicaciones_por_dia[dia].append(pub)
+    
+    # Mapeo de emojis por temática
+    emoji_tematicas = {
+        'Moda & Lifestyle': '👗',
+        'Arte & Diseño': '🎨', 
+        'Naturaleza & Bienestar': '🌿',
+        'Tecnología': '💻',
+        'Comida & Gastronomía': '🍽️',
+        'Lifestyle Inspiracional': '✨',
+        'General': '📝'
+    }
+    
+    # Mostrar calendario
+    dias_semana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    
+    # Encabezados de días
+    cols_header = st.columns(7)
+    for i, dia in enumerate(dias_semana):
+        cols_header[i].markdown(f"**{dia}**")
+    
+    # Mostrar semanas
+    for semana in cal:
+        cols = st.columns(7)
+        for i, dia in enumerate(semana):
+            if dia == 0:
+                cols[i].markdown("")
+            else:
+                with cols[i]:
+                    if dia in publicaciones_por_dia:
+                        # Día con publicación
+                        pub = publicaciones_por_dia[dia][0]  # Primera publicación del día
+                        
+                        # Color por formato
+                        color = "#8e24aa" if pub['formato'] == 'Reel' else "#e91e63" if pub['formato'] == 'Imagen' else "#f06292"
+                        
+                        # Emoji por temática
+                        emoji_tematica = emoji_tematicas.get(pub['tematica'], '📝')
+                        
+                        # Abreviatura del formato
+                        formato_abrev = pub['formato'][:4] if len(pub['formato']) <= 4 else pub['formato'][:3] + "."
+                        
+                        st.markdown(f"""
+                        <div style='background-color: {color}; color: white; padding: 0.3rem; border-radius: 8px; text-align: center; margin-bottom: 0.2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                            <strong style='font-size: 0.9rem;'>{dia}</strong><br>
+                            <small style='font-size: 0.7rem;'>{pub['hora']}:00</small><br>
+                            <small style='font-size: 0.7rem;'>{formato_abrev}</small><br>
+                            <span style='font-size: 0.8rem;'>{emoji_tematica}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Tooltip con información completa
+                        with st.expander(f"ℹ️", expanded=False):
+                            st.write(f"**🕐 Hora:** {pub['hora']}:00")
+                            st.write(f"**🎨 Formato:** {pub['formato']}")
+                            st.write(f"**🏷️ Temática:** {pub['tematica']}")
+                            st.write(f"**📱 Canal:** {pub['canal']}")
+                            st.write(f"**💰 Inversión:** {pub['inversion']:.0f}€")
+                            st.write(f"**👁️ Alcance esperado:** {pub['alcance_predicho']:,}")
+                    else:
+                        # Día sin publicación
+                        st.markdown(f"""
+                        <div style='background-color: #f5f5f5; color: #666; padding: 0.3rem; border-radius: 8px; text-align: center; margin-bottom: 0.2rem; min-height: 60px; display: flex; align-items: center; justify-content: center;'>
+                            <strong>{dia}</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    # Leyenda del calendario
+    st.markdown("---")
+    st.markdown("#### 🎨 Leyenda del Calendario")
+    
+    col_leyenda1, col_leyenda2 = st.columns(2)
+    
+    with col_leyenda1:
+        st.markdown("**Colores por Formato:**")
+        st.markdown("🟣 **Morado** = Reel")
+        st.markdown("🩷 **Rosa** = Imagen") 
+        st.markdown("🌸 **Rosa claro** = Carrusel")
+    
+    with col_leyenda2:
+        st.markdown("**Emojis por Temática:**")
+        for tematica, emoji in emoji_tematicas.items():
+            st.markdown(f"{emoji} **{tematica}**")
 
-@st.cache_data
-def cargar_datos_imagenes():
-    """Carga el CSV con los datos de las imágenes"""
+def mostrar_tabla_planificacion(planificacion):
+    """
+    Muestra una tabla detallada de la planificación
+    """
+    if not planificacion:
+        st.warning("No hay planificación generada")
+        return
     
-    # Usar rutas relativas
-    current_dir = os.path.dirname(__file__)
-    data_dir = os.path.join(current_dir, "Data")
+    # Convertir a DataFrame para mejor visualización
+    df_plan = pd.DataFrame(planificacion)
     
-    try:
-        csv_path = os.path.join(data_dir, "publicaciones_pixabay_ok.csv")
-        
-        # Verificar si existe el archivo CSV
-        if not os.path.exists(csv_path):
-            return pd.DataFrame()
-        
-        # Cargar CSV
-        df_imagenes = pd.read_csv(csv_path)
-        
-        # Convertir fecha si existe
-        fecha_col = None
-        if 'Fecha' in df_imagenes.columns:
-            fecha_col = 'Fecha'
-        elif 'fecha' in df_imagenes.columns:
-            fecha_col = 'fecha'
+    # Formatear para mostrar
+    df_display = df_plan.copy()
+    df_display['Fecha'] = df_display['fecha'].dt.strftime('%d/%m/%Y')
+    df_display['Día'] = df_display['dia_nombre']
+    df_display['Hora'] = df_display['hora'].apply(lambda x: f"{x:02d}:00")
+    df_display['Canal'] = df_display['canal']
+    df_display['Formato'] = df_display['formato']
+    df_display['Temática'] = df_display['tematica']
+    df_display['Inversión'] = df_display['inversion'].apply(lambda x: f"{x:.0f}€")
+    df_display['Alcance Predicho'] = df_display['alcance_predicho'].apply(lambda x: f"{x:,}")
+    df_display['Engagement Esperado'] = df_display['engagement_esperado'].apply(lambda x: f"{x:,}")
+    
+    # NUEVO: Añadir información de temática si está disponible
+    if 'tematica_score' in df_display.columns:
+        df_display['Score Temática'] = df_display['tematica_score'].apply(lambda x: f"{x:.2f}")
+    
+    # Seleccionar columnas para mostrar
+    columnas_mostrar = ['Fecha', 'Día', 'Hora', 'Canal', 'Formato', 'Temática', 'Inversión', 'Alcance Predicho', 'Engagement Esperado']
+    
+    # Añadir columna de score si existe
+    if 'Score Temática' in df_display.columns:
+        columnas_mostrar.append('Score Temática')
+    
+    df_final = df_display[columnas_mostrar].reset_index(drop=True)
+    df_final.index += 1
+    
+    st.dataframe(df_final, use_container_width=True)
+    
+    # NUEVO: Mostrar información sobre la fuente de temáticas
+    if 'fuente_tematica' in df_plan.columns:
+        fuente = df_plan['fuente_tematica'].iloc[0]
+        if fuente == "Computer Vision":
+            st.success(f"✨ **Temáticas optimizadas**: Basadas en análisis de Computer Vision de tu contenido histórico")
+        elif fuente == "Análisis histórico + CV":
+            st.info(f"🔍 **Temáticas inteligentes**: Combinando Computer Vision con datos de rendimiento histórico")
         else:
-            return pd.DataFrame()
+            st.info(f"📊 **Temáticas**: {fuente}")
+
+def mostrar_estadisticas_planificacion(planificacion):
+    """
+    Muestra estadísticas resumidas de la planificación
+    """
+    if not planificacion:
+        return
+    
+    df_plan = pd.DataFrame(planificacion)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_posts = len(planificacion)
+        st.metric("📊 Total Posts", total_posts)
+    
+    with col2:
+        inversion_total = df_plan['inversion'].sum()
+        st.metric("💰 Inversión Total", f"{inversion_total:.0f}€")
+    
+    with col3:
+        alcance_total = df_plan['alcance_predicho'].sum()
+        st.metric("👁️ Alcance Esperado", f"{alcance_total:,}")
+    
+    with col4:
+        engagement_total = df_plan['engagement_esperado'].sum()
+        st.metric("❤️ Engagement Esperado", f"{engagement_total:,}")
+    
+    # Distribución por formato
+    st.markdown("#### 📊 Distribución por Formato")
+    formato_dist = df_plan['formato'].value_counts()
+    fig_formato = px.pie(values=formato_dist.values, names=formato_dist.index,
+                        title="Distribución de Formatos Planificados",
+                        color_discrete_sequence=px.colors.sequential.Purples)
+    fig_formato.update_layout(paper_bgcolor='rgba(255,255,255,0.9)', font_color='#4a148c')
+    st.plotly_chart(fig_formato, use_container_width=True)
+    
+    # Distribución por día de la semana
+    col_dist1, col_dist2 = st.columns(2)
+    
+    with col_dist1:
+        st.markdown("#### 📅 Posts por Día de la Semana")
+        dia_dist = df_plan['dia_nombre'].value_counts()
+        fig_dias = px.bar(x=dia_dist.index, y=dia_dist.values,
+                        title="Posts por Día de la Semana",
+                        color=dia_dist.values,
+                        color_continuous_scale='Purples')
+        fig_dias.update_layout(paper_bgcolor='rgba(255,255,255,0.9)', font_color='#4a148c', showlegend=False)
+        st.plotly_chart(fig_dias, use_container_width=True)
+    
+    with col_dist2:
+        st.markdown("#### ⏰ Posts por Hora")
+        hora_dist = df_plan['hora'].value_counts().sort_index()
+        fig_horas = px.bar(x=hora_dist.index, y=hora_dist.values,
+                        title="Posts por Hora del Día",
+                        color=hora_dist.values,
+                        color_continuous_scale='Pinkyl')
+        fig_horas.update_layout(paper_bgcolor='rgba(255,255,255,0.9)', font_color='#4a148c', showlegend=False)
+        st.plotly_chart(fig_horas, use_container_width=True)
         
-        # Convertir fechas
-        df_imagenes[fecha_col] = pd.to_datetime(df_imagenes[fecha_col], errors='coerce')
-        df_imagenes['Fecha'] = df_imagenes[fecha_col]
+    # NUEVO: Análisis de temáticas
+    if 'tematica' in df_plan.columns:
+        st.markdown("---")
+        st.markdown("#### 🏷️ Distribución de Temáticas (Computer Vision)")
         
-        # Verificar si hay fechas válidas
-        fechas_validas = df_imagenes['Fecha'].notna().sum()
-        if fechas_validas == 0:
-            return pd.DataFrame()
+        col_tema1, col_tema2 = st.columns(2)
         
-        # Verificar columna Imagen
-        if 'Imagen' not in df_imagenes.columns:
-            return pd.DataFrame()
+        with col_tema1:
+            # Gráfico de distribución de temáticas
+            tema_dist = df_plan['tematica'].value_counts()
+            fig_temas = px.pie(
+                values=tema_dist.values, 
+                names=tema_dist.index,
+                title="🏷️ Temáticas Planificadas",
+                color_discrete_sequence=px.colors.sequential.Viridis
+            )
+            fig_temas.update_layout(paper_bgcolor='rgba(255,255,255,0.9)', font_color='#4a148c')
+            st.plotly_chart(fig_temas, use_container_width=True)
         
-        # Verificar si hay una columna 'URL_Publica' en el CSV
-        if 'URL_Publica' in df_imagenes.columns:
-            df_imagenes['imagen_existe'] = True
-            df_imagenes['tipo_imagen'] = 'url_publica'
+        with col_tema2:
+            # Mostrar scores de temáticas si están disponibles
+            if 'tematica_score' in df_plan.columns:
+                st.markdown("##### 🎯 Scores de Temáticas")
+                tema_scores = df_plan.groupby('tematica')['tematica_score'].mean().sort_values(ascending=False)
+                
+                for tema, score in tema_scores.items():
+                    color = "🟢" if score > 0.6 else "🟡" if score > 0.4 else "🔴"
+                    st.write(f"{color} **{tema}**: {score:.2f}")
             
-        elif 'Ruta' in df_imagenes.columns and df_imagenes['Ruta'].str.contains('http', na=False).any():
-            df_imagenes['URL_Publica'] = df_imagenes['Ruta']
-            df_imagenes['imagen_existe'] = True
-            df_imagenes['tipo_imagen'] = 'url_publica'
+            # Mostrar temática más frecuente
+            tema_principal = tema_dist.index[0]
+            frecuencia_principal = (tema_dist.iloc[0] / len(df_plan)) * 100
+            st.metric("🏆 Temática Principal", tema_principal, f"{frecuencia_principal:.1f}% del contenido")
+
+def convertir_planificacion_csv(planificacion):
+    """
+    Convierte la planificación a formato CSV para descarga
+    """
+    df_plan = pd.DataFrame(planificacion)
+    
+    # Preparar datos para CSV
+    df_csv = df_plan.copy()
+    df_csv['Fecha'] = df_csv['fecha'].dt.strftime('%d/%m/%Y')
+    df_csv['Hora'] = df_csv['hora'].apply(lambda x: f"{x:02d}:00")
+    
+    # Seleccionar y renombrar columnas
+    columnas_csv = {
+        'Fecha': 'fecha',
+        'Día': 'dia_nombre', 
+        'Hora': 'Hora',
+        'Canal': 'canal',
+        'Formato': 'formato',
+        'Temática': 'tematica',
+        'Inversión_€': 'inversion',
+        'Alcance_Predicho': 'alcance_predicho',
+        'Engagement_Esperado': 'engagement_esperado'
+    }
+    
+    df_export = pd.DataFrame()
+    for col_nueva, col_original in columnas_csv.items():
+        if col_original in df_csv.columns:
+            df_export[col_nueva] = df_csv[col_original]
+    
+    return df_export.to_csv(index=False)
+
+def mostrar_insights_historicos(df, canal):
+    """
+    Muestra insights históricos para ayudar en la planificación
+    """
+    if len(df) == 0:
+        return
+    
+    # Filtrar por canal si está disponible
+    df_canal = df[df['Canal'] == canal].copy() if 'Canal' in df.columns and canal in df['Canal'].values else df.copy()
+    
+    if len(df_canal) == 0:
+        return
+    
+    col_insight1, col_insight2 = st.columns(2)
+    
+    with col_insight1:
+        if 'Fecha' in df_canal.columns:
+            df_canal['hora'] = df_canal['Fecha'].dt.hour
+            df_canal['dia_semana'] = df_canal['Fecha'].dt.dayofweek
             
-        else:
-            # Fallback: Generar URLs placeholder
-            def generar_url_placeholder(nombre_imagen):
-                try:
-                    numero = nombre_imagen.replace('IMG_', '').replace('.jpg', '').replace('.jpeg', '').replace('.png', '')
-                    numero_clean = int(numero) % 1000
-                    return f"https://picsum.photos/400/400?random={numero_clean}"
-                except:
-                    return f"https://picsum.photos/400/400?random=1"
+            # Mejor hora histórica
+            if 'Interacciones' in df_canal.columns and 'Alcance' in df_canal.columns:
+                df_canal['engagement_rate'] = (df_canal['Interacciones'] / df_canal['Alcance']).fillna(0)
+                mejor_hora = df_canal.groupby('hora')['engagement_rate'].mean().idxmax()
+                mejor_engagement = df_canal.groupby('hora')['engagement_rate'].mean().max()
+                
+                st.info(f"🕐 **Mejor hora histórica**: {mejor_hora}:00 (Engagement: {mejor_engagement:.3f})")
             
-            df_imagenes['URL_Publica'] = df_imagenes['Imagen'].apply(generar_url_placeholder)
-            df_imagenes['imagen_existe'] = True
-            df_imagenes['tipo_imagen'] = 'placeholder'
+            # Mejor día histórico
+            if 'engagement_rate' in df_canal.columns:
+                dias_nombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+                mejor_dia_num = df_canal.groupby('dia_semana')['engagement_rate'].mean().idxmax()
+                mejor_dia_nombre = dias_nombres[mejor_dia_num]
+                
+                st.info(f"📅 **Mejor día histórico**: {mejor_dia_nombre}")
+    
+    with col_insight2:
+        if 'Formato' in df_canal.columns:
+            formato_mas_usado = df_canal['Formato'].mode().iloc[0] if not df_canal['Formato'].mode().empty else "N/A"
+            st.info(f"🎨 **Formato más utilizado**: {formato_mas_usado}")
         
-        # Agregar información descriptiva
-        df_imagenes['descripcion'] = df_imagenes.apply(
-            lambda row: f"Imagen real: {row['Imagen']}" if row.get('tipo_imagen') == 'url_publica' 
-            else f"Placeholder para: {row['Imagen']}", axis=1
-        )
-        
-        # Filtrar datos válidos
-        df_imagenes_validas = df_imagenes.dropna(subset=['Imagen', 'Fecha'])
-        
-        return df_imagenes_validas
-        
-    except Exception as e:
-        return pd.DataFrame()
+        if 'Alcance' in df_canal.columns:
+            alcance_promedio = df_canal['Alcance'].mean()
+            st.info(f"👁️ **Alcance promedio histórico**: {alcance_promedio:,.0f}")
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Oráculo Digital",
-    page_icon="🔮",
+    page_title="Diva Digital - Análisis de Redes Sociales",
+    page_icon="💜",
     layout="wide",
     initial_sidebar_state="expanded"
+)
 
 # Definir variables de colores y rutas
-PRIMARY_COLOR = "#7bbeed"
+PRIMARY_COLOR = "#8e24aa"
 # Ruta relativa para el logo (dentro de la carpeta App)
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "/Users/n.arcos89/Documents/GitHub/Oraculo/logo_app_oraculo.png")
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "logo_diva_digital.png")
 
 # --- ESTILOS PERSONALIZADOS MEJORADOS ---
 page_bg = """
@@ -316,8 +516,8 @@ page_bg = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary-blue: #7bbeed;
-    --dark-blue: #2682ea;
+    --primary-purple: #6B46C1;
+    --dark-purple: #4C1D95;
     --light-gray: #F8FAFC;
     --medium-gray: #E2E8F0;
     --dark-gray: #334155;
@@ -587,8 +787,8 @@ hr, .stMarkdown hr {
 
 .stTabs [aria-selected="true"] {
     background: var(--primary-purple) !important;
-    color: #1E293B !important; 
-    box-shadow: var(--shadow-sm) !important;;
+    color: var(--white) !important;
+    box-shadow: var(--shadow-sm) !important;
 }
 
 /* Selectboxes y inputs */
@@ -1062,25 +1262,21 @@ col_logo_left, col_logo_center, col_logo_right = st.columns([1, 2, 1])
 
 with col_logo_center:
     if os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=320, use_container_width=False)
+        st.image(LOGO_PATH, width=400, use_container_width=False)
     else:
         st.markdown("""
         <div style="text-align: center; margin: 2rem 0;">
-            <h1 style="font-size: 3.2rem; color: #bbdefb; margin: 0; text-shadow: 0 0 12px rgba(66,165,245,0.6);">🔮 ORÁCULO</h1>
-            <p style="font-size: 1.3rem; color: #90caf9; margin: 0.5rem 0;">El destino de tus redes revelado por los datos</p>
+            <h1 style="font-size: 3.5rem; color: #4a148c; margin: 0;">💜 DIVA DIGITAL</h1>
+            <p style="font-size: 1.3rem; color: #6a1b9a; margin: 0.5rem 0;">Empodera tu estrategia digital</p>
         </div>
         """, unsafe_allow_html=True)
 
 # --- DESCRIPCIÓN INICIAL ---
 st.markdown("""
-<div style='background:rgba(25,25,35,0.85);padding:1.5em 2em;border-radius:18px;margin-bottom:1.5em;
-            box-shadow:0 0 20px rgba(103,58,183,0.4);border-left: 4px solid #42a5f5;'>
-    <span style='font-size:1.3em;color:#bbdefb;'><b>Bienvenido al Oráculo Digital</b></span><br>
-    <span style='color:#e3f2fd;'>
-        Las constelaciones de los datos revelan el porvenir de tus publicaciones.<br>
-        El Oráculo te guía a <b>analizar, visualizar y predecir</b> los destinos de Instagram, Facebook y TikTok.<br>
-        Descubre los momentos propicios, optimiza tu energía invertida y toma decisiones con la sabiduría de los astros.
-    </span>
+<div style='background:rgba(255,255,255,0.9);padding:1.2em 2em;border-radius:18px;margin-bottom:1.5em;box-shadow:0 4px 15px rgba(142,36,170,0.1);border-left: 4px solid #e91e63;'>
+    <span style='font-size:1.2em;color:#e91e63;'><b>¿Quieres impulsar tu marca en redes sociales?</b></span><br>
+    <span style='color:#4a148c;'>Diva Digital te ayuda a <b>analizar, visualizar y predecir</b> el rendimiento de tus publicaciones en Instagram, Facebook y TikTok.<br>
+    Descubre qué funciona mejor, optimiza tu inversión y toma decisiones basadas en datos, ¡todo en una interfaz atractiva y sencilla!</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1099,7 +1295,7 @@ def cargar_datos():
     
     try:
         # Intentar cargar el dataset principal desde Data/
-        data_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_unificada.csv")
+        data_path = os.path.join(data_dir, "data_unificada.csv")
         df_principal = pd.read_csv(data_path, sep=';')
         
         # Convertir fechas
@@ -1115,7 +1311,7 @@ def cargar_datos():
         st.warning("⚠️ Dataset principal no encontrado, cargando datos demo...")
         try:
             # Cargar datos demo como fallback desde Data/
-            demo_path = os.path.join(data_dir, "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/data_demo_ok.csv")
+            demo_path = os.path.join(data_dir, "data_demo_ok.csv")
             df_demo = pd.read_csv(demo_path)
             
             # Convertir fechas
@@ -1153,7 +1349,7 @@ def cargar_datos_imagenes():
     
     try:
         # Cargar el CSV de imágenes principal
-        csv_file = "/Users/n.arcos89/Documents/GitHub/Oraculo/Data/publicaciones_pixabay_ok.csv"
+        csv_file = "publicaciones_pixabay_ok.csv"
         csv_path = os.path.join(data_dir, csv_file)
         
         # Verificar si existe el archivo CSV
@@ -1231,40 +1427,22 @@ def cargar_datos_imagenes():
 df_imagenes = cargar_datos_imagenes()
 
 # --- SIDEBAR: LOGO, FILTROS Y RESUMEN ---
+# Logo en el sidebar
 if os.path.exists(LOGO_PATH):
-    st.sidebar.image(LOGO_PATH, width=160, use_container_width=False)
+    st.sidebar.image(LOGO_PATH, width=150, use_container_width=False)
 else:
     st.sidebar.markdown("""
-    <div style='text-align: center; padding: 1rem; background: rgba(25,25,35,0.85); 
-                border-radius: 15px; margin-bottom: 1rem; box-shadow: 0 0 12px rgba(66,165,245,0.4);'>
-        <h2 style='margin: 0; color: #1976d2; font-size: 1.4rem;'>🔮 ORÁCULO</h2>
-        <p style='margin: 0; color: #90caf9; font-size: 0.9rem;'>Predicciones Digitales</p>
+    <div style='text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.1); border-radius: 15px; margin-bottom: 1rem;'>
+        <h2 style='margin: 0; color: #fff; font-size: 1.5rem;'>💜 DIVA DIGITAL</h2>
+        <p style='margin: 0; color: #fff; font-size: 0.9rem;'>Analytics & Insights</p>
     </div>
     """, unsafe_allow_html=True)
 
-st.sidebar.markdown(
-    "<h3 style='color:#1976d2; text-align: center;'>📜 Pergamino de Control</h3>", 
-    unsafe_allow_html=True
-)
-
-st.sidebar.markdown(
-    "<p style='color:##1976d2; text-align: center;'>Consulta los astros de tus datos<br>y descubre lo que el destino digital tiene preparado para ti ✨</p>", 
-    unsafe_allow_html=True
-)
+st.sidebar.markdown("<h3 style='color: var(--text-primary); text-align: center;'>📊 Panel de Control</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='color: var(--text-primary); text-align: center;'>Empodera tu estrategia digital con datos 💫</p>", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔎 Filtra las visiones")
-
-# Ejemplo de filtros (puedes conectar con tu dataframe)
-canales = ["Instagram", "Facebook", "TikTok"]
-formatos = ["Imagen", "Reel", "Carrusel"]
-
-filtro_canal = st.sidebar.multiselect("📱 Canal", canales, default=canales)
-filtro_formato = st.sidebar.multiselect("🎨 Formato", formatos, default=formatos)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📈 Resumen del destino")
-st.sidebar.success("🌌 **42 publicaciones** observadas en las estrellas")
+st.sidebar.markdown("### 🔎 Filtra tus datos")
 
 # Mostrar información básica de los datos
 fecha_info = "N/A"
@@ -1408,7 +1586,7 @@ models_ok = all(model is not None for model in [reg, scaler, le_canal, le_format
 modelo_temporal, le_formato_temporal = crear_modelo_temporal_visual(df)
 
 # --- APP STREAMLIT ---
-st.title("🔮 Oráculo: Análisis de Redes Sociales para Marcas")
+st.title("✨ Diva Digital: Análisis de Redes Sociales para Marcas")
 
 tab1, tab2, tab3 = st.tabs(["📊 Informe", "🔮 Modelo Predictivo", "🚀 Next Steps"])
 
@@ -4819,7 +4997,7 @@ with tab3:
             "**Hootsuite/Buffer**: Programación automática",
             "**Canva Pro**: Creación visual optimizada",
             "**Google Analytics**: Tracking de conversiones",
-            "**Oráculo**: Análisis predictivo (¡ya lo tienes!)"
+            "**Diva Digital**: Análisis predictivo (¡ya lo tienes!)"
         ]
         
         for herramienta in herramientas:
@@ -4843,7 +5021,7 @@ with tab3:
     st.markdown("## 📅 Tu Plan de Acción Semanal")
     
     plan_semanal = {
-        "Lunes": "📊 Revisar métricas de la semana anterior en Oráculo",
+        "Lunes": "📊 Revisar métricas de la semana anterior en Diva Digital",
         "Martes": "🎨 Crear contenido usando recomendaciones del analizador visual",
         "Miércoles": "📱 Publicar en tu canal principal en horario óptimo",
         "Jueves": "🔍 Analizar rendimiento y ajustar siguiente publicación",
@@ -4935,7 +5113,7 @@ with tab3:
     
     with col_feedback2:
         st.markdown("#### ⭐ Califica tu Experiencia")
-        rating = st.select_slider("¿Qué tal tu experiencia con Oráculo?", 
+        rating = st.select_slider("¿Qué tal tu experiencia con Diva Digital?", 
                                 options=[1, 2, 3, 4, 5],
                                 format_func=lambda x: "⭐" * x)
         
@@ -4960,44 +5138,40 @@ with tab3:
     with col_contact1:
         st.markdown("""
         #### 📧 Contacto
-        - **Email**: info@oraculo.com
-        - **Soporte**: support@oraculo.com
-        - **Ventas**: sales@oraculo.com
+        - **Email**: info@divadigital.com
+        - **Soporte**: support@divadigital.com
+        - **Ventas**: sales@divadigital.com
         """)
     
     with col_contact2:
         st.markdown("""
         #### 🌐 Síguenos
-        - **LinkedIn**: /company/oraculo
-        - **Instagram**: @oraculo_official
-        - **Twitter**: @oraculoApp
+        - **LinkedIn**: /company/diva-digital
+        - **Instagram**: @divadigital_official
+        - **Twitter**: @DivaDigitalApp
         """)
     
     with col_contact3:
         st.markdown("""
         #### 📚 Recursos
-        - **Documentación**: docs.oraculo.com
-        - **Blog**: blog.oraculo.com
-        - **Webinars**: events.oraculo.com
+        - **Documentación**: docs.divadigital.com
+        - **Blog**: blog.divadigital.com
+        - **Webinars**: events.divadigital.com
         """)
 
-# --- FOOTER ORÁCULO ---
+# --- FOOTER ---
 st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center; padding: 2rem; background: rgba(25,25,35,0.9); 
-                border-radius: 15px; margin-top: 2rem; box-shadow: 0 0 15px rgba(66,165,245,0.3);'>
-        <h3 style='color: #bbdefb; margin-bottom: 1rem;'>🔮 Oráculo Digital</h3>
-        <p style='color: #90caf9; font-size: 1.1rem; margin-bottom: 1rem;'>
-            <strong>Las estrellas guían tu estrategia en redes sociales</strong>
-        </p>
-        <p style='color: #bbdefb; font-size: 0.9rem;'>
-            Desarrollado con ✨ para quienes buscan descifrar el destino de su marca en el universo digital
-        </p>
-        <p style='color: #90caf9; font-size: 0.8rem; margin-top: 1rem;'>
-            © 2025 Oráculo Digital. Todos los derechos reservados.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<div style='text-align: center; padding: 2rem; background: rgba(255,255,255,0.8); border-radius: 15px; margin-top: 2rem;'>
+    <h3 style='color: #4a148c; margin-bottom: 1rem;'>💜 Diva Digital</h3>
+    <p style='color: #6a1b9a; font-size: 1.1rem; margin-bottom: 1rem;'>
+        <strong>Empodera tu estrategia digital con datos inteligentes</strong>
+    </p>
+    <p style='color: #8e24aa; font-size: 0.9rem;'>
+        Desarrollado con ❤️ para marcas que buscan crecer en redes sociales
+    </p>
+    <p style='color: #8e24aa; font-size: 0.8rem; margin-top: 1rem;'>
+        © 2025 Diva Digital. Todos los derechos reservados.
+    </p>
+</div>
+""", unsafe_allow_html=True)
